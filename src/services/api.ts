@@ -1,8 +1,12 @@
 import { Transaction, Budget, UserSettings } from '../types';
 
-// Dynamic API host determination (supports localhost and mobile LAN IP like 192.168.1.40)
+// Dynamic API host determination (supports localhost, local network IP, and Vercel production)
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
+    // If running in production (Vercel, Render, or any standard port 80/443 without local dev port)
+    if (window.location.port === '' || window.location.protocol === 'https:') {
+      return '/api';
+    }
     const host = window.location.hostname || 'localhost';
     return `http://${host}:5001/api`;
   }
