@@ -9,6 +9,8 @@ import {
   SpendingInsight,
 } from '../types';
 import { storageService } from '../utils/storage';
+import { apiService } from '../services/api';
+import { useAuth } from './AuthContext';
 import {
   filterTransactionsByDate,
   calculateFinancialSummary,
@@ -46,6 +48,7 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { showToast } = useToast();
+  const { isAuthenticated, user } = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
     storageService.getTransactions()
@@ -58,20 +61,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // Sync with localStorage across tabs or internal events
+  // Sync with MongoDB backend when user is authenticated
   useEffect(() => {
-    const handleStorageChange = () => {
-      setTransactions(storageService.getTransactions());
-      setBudgets(storageService.getBudgets());
-      setSettings(storageService.getSettings());
+    let isMounted = true;
+
+    const loadBackendData = async () => {
+      if (isAuthenticated) {
+        try {
+          const [backendTxs, backendBudgets, backendSettings] = await Promise.all([
+            apiService.getTransactions(),
+            apiService.getBudgets(),
+            apiService.getSettings(),
+          ]);
+
+          if (isMounted) {
+            setTransactions(backendTxs);
+            setBudgets(backendBudgets);
+            setSettings(backendSettings);
+            // Also update local storage as offline cache
+            storageService.saveTransactions(backendTxs);
+            storageService.saveBudgets(backendBudgets);
+            storageService.saveSettings(backendSettings);
+          }
+        } catch (err) {
+          console.warn('[AppContext] Could not fetch data from MongoDB backend, using local store:', err);
+        }
+      }
     };
-    window.addEventListener('moneta-storage-updated', handleStorageChange);
-    window.addEventListener('storage', handleStorageChange);
+
+    loadBackendData();
     return () => {
-      window.removeEventListener('moneta-storage-updated', handleStorageChange);
-      window.removeEventListener('storage', handleStorageChange);
+      isMounted = false;
     };
-  }, []);
+  }, [isAuthenticated, user?.id]);
 
   // Theme application
   useEffect(() => {
@@ -97,7 +119,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentPeriod, previousPeriod, settings.openingBalance]);
 
   const budgetStatuses = useMemo(() => {
-    // Current month is October (month index 10)
     const now = new Date();
     return calculateBudgetStatuses(budgets, transactions, now.getMonth() + 1, now.getFullYear(), now);
   }, [budgets, transactions]);
@@ -106,49 +127,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return generateSpendingInsights(currentPeriod, previousPeriod, budgetStatuses);
   }, [currentPeriod, previousPeriod, budgetStatuses]);
 
-  // CRUD actions
+  // CRUD actions (dispatches to MongoDB if authenticated + optimistic local state update)
   const addTransaction = useCallback(
-    (tx: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => {
+    async (tx: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => {
       const now = new Date().toISOString();
+      const generatedId = `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
       const newTx: Transaction = {
         ...tx,
-        id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: generatedId,
         createdAt: now,
         updatedAt: now,
       };
+
+      // Optimistic update
       const updated = [newTx, ...transactions];
       setTransactions(updated);
       storageService.saveTransactions(updated);
       showToast('Transaction recorded successfully', 'success');
+
+      // Persist to MongoDB backend
+      if (isAuthenticated) {
+        try {
+          await apiService.createTransaction(newTx);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync new transaction to MongoDB:', err);
+        }
+      }
     },
-    [transactions, showToast]
+    [transactions, showToast, isAuthenticated]
   );
 
   const updateTransaction = useCallback(
-    (id: string, updates: Partial<Transaction>) => {
+    async (id: string, updates: Partial<Transaction>) => {
       const updated = transactions.map((t) =>
         t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t
       );
       setTransactions(updated);
       storageService.saveTransactions(updated);
       showToast('Transaction updated', 'success');
+
+      if (isAuthenticated) {
+        try {
+          await apiService.updateTransaction(id, updates);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync update to MongoDB:', err);
+        }
+      }
     },
-    [transactions, showToast]
+    [transactions, showToast, isAuthenticated]
   );
 
   const deleteTransaction = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const updated = transactions.filter((t) => t.id !== id);
       setTransactions(updated);
       storageService.saveTransactions(updated);
       showToast('Transaction removed', 'info');
+
+      if (isAuthenticated) {
+        try {
+          await apiService.deleteTransaction(id);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync delete to MongoDB:', err);
+        }
+      }
     },
-    [transactions, showToast]
+    [transactions, showToast, isAuthenticated]
   );
 
   const addBudget = useCallback(
     (budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => {
-      // Check for duplicate category budget for the same month/year
       const existing = budgets.find(
         (b) =>
           b.category === budget.category &&
@@ -164,9 +212,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const now = new Date().toISOString();
+      const generatedId = `b-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
       const newBudget: Budget = {
         ...budget,
-        id: `b-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: generatedId,
         createdAt: now,
         updatedAt: now,
       };
@@ -175,50 +224,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBudgets(updated);
       storageService.saveBudgets(updated);
       showToast('Budget target created', 'success');
+
+      if (isAuthenticated) {
+        apiService.createBudget(newBudget).catch((err) => {
+          console.error('[AppContext] Failed to sync budget to MongoDB:', err);
+        });
+      }
+
       return { success: true };
     },
-    [budgets, showToast]
+    [budgets, showToast, isAuthenticated]
   );
 
   const updateBudget = useCallback(
-    (id: string, updates: Partial<Budget>) => {
+    async (id: string, updates: Partial<Budget>) => {
       const updated = budgets.map((b) =>
         b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b
       );
       setBudgets(updated);
       storageService.saveBudgets(updated);
       showToast('Budget updated', 'success');
+
+      if (isAuthenticated) {
+        try {
+          await apiService.updateBudget(id, updates);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync budget update to MongoDB:', err);
+        }
+      }
     },
-    [budgets, showToast]
+    [budgets, showToast, isAuthenticated]
   );
 
   const deleteBudget = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const updated = budgets.filter((b) => b.id !== id);
       setBudgets(updated);
       storageService.saveBudgets(updated);
       showToast('Budget target deleted', 'info');
+
+      if (isAuthenticated) {
+        try {
+          await apiService.deleteBudget(id);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync budget delete to MongoDB:', err);
+        }
+      }
     },
-    [budgets, showToast]
+    [budgets, showToast, isAuthenticated]
   );
 
   const updateSettings = useCallback(
-    (updates: Partial<UserSettings>) => {
+    async (updates: Partial<UserSettings>) => {
       const updated = { ...settings, ...updates };
       setSettings(updated);
       storageService.saveSettings(updated);
       showToast('Settings saved', 'success');
+
+      if (isAuthenticated) {
+        try {
+          await apiService.updateSettings(updates);
+        } catch (err) {
+          console.error('[AppContext] Failed to sync settings to MongoDB:', err);
+        }
+      }
     },
-    [settings, showToast]
+    [settings, showToast, isAuthenticated]
   );
 
-  const resetToDemo = useCallback(() => {
+  const resetToDemo = useCallback(async () => {
     storageService.resetAllToDemo();
     setTransactions(storageService.getTransactions());
     setBudgets(storageService.getBudgets());
     setSettings(storageService.getSettings());
+
+    if (isAuthenticated) {
+      try {
+        await apiService.resetDemoData();
+      } catch (err) {
+        console.error('[AppContext] Failed to reset demo data in MongoDB:', err);
+      }
+    }
+
     showToast('Reset to demo sample data successfully', 'success');
-  }, [showToast]);
+  }, [showToast, isAuthenticated]);
 
   return (
     <AppContext.Provider

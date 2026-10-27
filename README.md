@@ -1,9 +1,10 @@
-# MONETA — Personal Expense Tracker with Charts
+# MONETA — Personal Expense Tracker with Charts (MERN Full Stack)
 
 > **Full Stack Development (FSD) Mini-Project**  
-> *A high-precision personal finance command center combining Linear-grade editorial design, deterministic financial algorithms, and dynamic Recharts data visualization.*
+> *A high-precision personal finance command center combining Linear-grade editorial design, deterministic financial algorithms, dynamic Recharts data visualization, and a complete MongoDB / Express REST API backend with pre-seeded demo authentication.*
 
-[![Build & Test](https://img.shields.io/badge/Vitest-15%20Passing-emerald?style=flat-square&logo=vitest)](./src/test)
+[![Build & Test](https://img.shields.io/badge/Vitest-16%20Passing-emerald?style=flat-square&logo=vitest)](./src/test)
+[![Backend](https://img.shields.io/badge/Backend-Express%20%2B%20MongoDB-green?style=flat-square&logo=mongodb)](./server)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](./tsconfig.json)
 [![React](https://img.shields.io/badge/React-18.3-61dafb?style=flat-square&logo=react)](./package.json)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?style=flat-square&logo=tailwindcss)](./tailwind.config.js)
@@ -11,9 +12,28 @@
 
 ---
 
+## ⚡ Quick Evaluation: Instant Demo Account
+
+For rapid evaluation and college project viva presentations, MONETA provides a **pre-seeded demonstration account** ready to use with a single click:
+
+| Attribute | Demo Value |
+| :--- | :--- |
+| **Demo Email** | `demo@moneta.app` |
+| **Demo Password** | `demo123456` |
+| **One-Click Login** | Click **"⚡ Enter with Demo Account"** on the login screen |
+| **Pre-loaded Records** | 6 months of realistic transactions (May to Oct 2026), active monthly budgets, and capital baseline |
+| **Database** | Fully managed MongoDB collections (`users`, `transactions`, `budgets`, `settings`) |
+
+---
+
 ## 1. Project Overview & Product Vision
 
-**MONETA** is a premium, client-side personal expense tracker designed to bridge the gap between cluttered personal finance spreadsheets and expensive subscription fintech applications. Conceived as a Full Stack Development mini-project, MONETA delivers a production-grade software experience built on the visual principles of Linear and Stripe: **typography-driven hierarchy, tabular numeral alignment, zero-configuration local persistence, and mathematically authentic chart reactivity**.
+**MONETA** is a production-grade personal finance web application built on the **MERN stack** (MongoDB, Express, React, Node.js). Conceived as an exemplary Full Stack Development mini-project, MONETA marries the visual refinement of Linear and Stripe with real-time financial tracking and mathematical rigor.
+
+### Key Highlights:
+- **True Full-Stack MERN Architecture**: Node.js & Express REST API server backed by MongoDB Mongoose schemas with JWT authentication and bcrypt password hashing.
+- **Zero-Setup Database Flexibility**: Seamlessly connects to MongoDB Atlas or local `mongod`. If no database URI is configured, it automatically spins up an embedded in-memory MongoDB instance out of the box!
+- **Instant One-Click Demo Mode**: Examiners and evaluators can jump directly into the full dashboard without creating a new account or typing credentials.
 
 Every metric card, timeline area chart, and budget progress bar in MONETA is derived in real-time from a single unified transaction dataset. There are no fabricated percentages, no placeholder links, and no simulated AI hallucinations.
 
@@ -181,6 +201,9 @@ interface Budget {
 
 ## 8. Application Screenshots
 
+### Authentication & 1-Click Demo Login
+![MONETA Auth & Demo Login](./docs/screenshots/auth-desktop.png)
+
 ### Executive Financial Dashboard (Desktop 1440px)
 ![MONETA Dashboard Desktop](./docs/screenshots/dashboard-desktop.png)
 
@@ -230,11 +253,12 @@ Open your browser and navigate to `http://localhost:5173`.
 
 | Command | Action |
 | :--- | :--- |
-| `npm run dev` | Starts the local Vite development server with instant HMR. |
+| `npm run dev:all` | **Recommended**: Concurrently launches the Express/MongoDB API server (port 5001) and Vite frontend (port 5173). |
+| `npm run server` | Starts only the Node.js / Express backend server with embedded MongoDB / Atlas connection. |
+| `npm run dev` | Starts only the local Vite frontend development server. |
 | `npm run build` | Compiles TypeScript (`tsc`) and executes Vite production bundling into `dist/`. |
 | `npm run preview` | Locally serves the optimized production build (`dist/`) on port 4173. |
-| `npm test` | Runs the Vitest automated test suite once with full reporting. |
-| `npm run test:watch` | Runs Vitest in interactive watch mode for active TDD. |
+| `npm test` | Runs the Vitest automated test suite with 16 passing tests. |
 
 ---
 

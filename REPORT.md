@@ -99,9 +99,9 @@ Finally, I thank my family and peers for their continuous support and collaborat
 
 Personal financial awareness is essential for individuals navigating high-velocity digital payment ecosystems such as the Unified Payments Interface (UPI) and digital card networks. However, most consumers struggle with cumbersome manual spreadsheets or third-party cloud apps that raise severe data privacy risks.
 
-This project presents **MONETA**, a client-side personal finance tracking and analytical web application designed with an editorial aesthetic inspired by Linear and Stripe. Engineered using **React 18, TypeScript 5.6, Tailwind CSS 3.4, and Vite 5**, MONETA delivers reactive financial intelligence without external cloud latency or data transmission. The platform incorporates a strict mathematical engine that computes opening balances, period net savings, historical savings velocity (%), and deterministic anomaly insights directly from client data. Dynamic visualizations powered by **Recharts** feature dual-gradient Area charts, category donut charts with centered balance counters, and longitudinal line plots. 
+This project presents **MONETA**, a full-stack personal finance tracking and analytical web application designed on the **MERN stack** (MongoDB, Express, React, Node.js) with an editorial aesthetic inspired by Linear and Stripe. Engineered using **MongoDB (Mongoose), Express.js, React 18, TypeScript 5.6, Tailwind CSS 3.4, and Vite 5**, MONETA delivers reactive financial intelligence backed by a production-ready REST API with JSON Web Token (JWT) authentication, password hashing via bcrypt, and a pre-seeded evaluation demo account (`demo@moneta.app` / `demo123456`). The platform incorporates a strict mathematical engine that computes opening balances, period net savings, historical savings velocity (%), and deterministic anomaly insights directly from verified database records. Dynamic visualizations powered by **Recharts** feature dual-gradient Area charts, category donut charts with centered balance counters, and longitudinal line plots. 
 
-Data is securely managed via a typed, fault-tolerant **Web Storage (LocalStorage) engine** supporting JSON backup restoration and CSV export. The system includes an automated test suite implemented in **Vitest and React Testing Library** verifying calculation formulas, persistence layers, and UI components across 15 passing test suites. MONETA establishes that an autonomous client-side application can provide institutional-grade design, mathematical rigor, and complete data privacy for modern personal finance management.
+The backend supports flexible connectivity: connecting to MongoDB Atlas or local MongoDB instances, while automatically provisioning an embedded in-memory database instance for zero-configuration collegiate evaluations. The system includes an automated test suite implemented in **Vitest and React Testing Library** verifying calculation formulas, persistence layers, and UI components across 16 passing test suites. MONETA establishes that a modern MERN stack application can provide institutional-grade design, mathematical rigor, and complete data privacy for modern personal finance management.
 
 ---
 
@@ -332,33 +332,86 @@ flowchart TD
 
 ---
 
-## 20. Database / Data-Model Design (LocalStorage Architecture)
+## 20. Database / Data-Model Design (MongoDB & Mongoose Architecture)
 
-Because MONETA is architected for zero-configuration collegiate demonstration and strict client privacy, data persistence is powered by the browser's **Web Storage API (LocalStorage)**.
+MONETA utilizes **MongoDB** as its primary document database, modeled using **Mongoose ODM** schemas with composite indexes for sub-millisecond query execution.
 
-### Storage Keys
-- `moneta_transactions_v1`: JSON string array representing `Transaction[]`.
-- `moneta_budgets_v1`: JSON string array representing `Budget[]`.
-- `moneta_settings_v1`: JSON string dictionary representing `UserSettings`.
+### MongoDB Collections Schema
 
-### Fault-Tolerant Access Pattern
+#### 1. `users` Collection
+Stores registered user credentials and authorization metadata.
 ```typescript
-getTransactions(): Transaction[] {
-  try {
-    const stored = localStorage.getItem('moneta_transactions_v1');
-    if (!stored) {
-      this.saveTransactions(INITIAL_TRANSACTIONS);
-      return INITIAL_TRANSACTIONS;
-    }
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) throw new Error('Malformed format');
-    return parsed;
-  } catch (e) {
-    console.warn('LocalStorage error, restoring seed data:', e);
-    return INITIAL_TRANSACTIONS;
-  }
+{
+  _id: ObjectId,
+  name: String (required, trim),
+  email: String (required, unique, lowercase, index),
+  passwordHash: String (required, bcrypt salt 10),
+  isDemo: Boolean (default: false),
+  createdAt: ISODate,
+  updatedAt: ISODate
 }
 ```
+
+#### 2. `transactions` Collection
+Maintains comprehensive ledger entries linked to the authenticated user ID.
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: 'User', required, index),
+  id: String (required), // Client-compatible UUID
+  description: String (required, trim),
+  amount: Number (required, min: 0),
+  type: String (enum: ['income', 'expense'], required),
+  category: String (required),
+  date: String (YYYY-MM-DD, required),
+  paymentMethod: String (required),
+  notes: String,
+  createdAt: ISODate,
+  updatedAt: ISODate
+}
+// Index: { userId: 1, date: -1 }
+```
+
+#### 3. `budgets` Collection
+Enforces category-level and global spending caps with duplicate protection.
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: 'User', required, index),
+  id: String (required),
+  category: String (required),
+  limit: Number (required, min: 0),
+  month: Number (min: 1, max: 12),
+  year: Number,
+  createdAt: ISODate,
+  updatedAt: ISODate
+}
+// Compound Unique Index: { userId: 1, category: 1, month: 1, year: 1 }
+```
+
+#### 4. `settings` Collection
+Persists user configuration, opening balance baseline, and currency preferences.
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: 'User', required, unique),
+  currency: String (default: 'INR'),
+  currencySymbol: String (default: '₹'),
+  currencyLocale: String (default: 'en-IN'),
+  theme: String (enum: ['light', 'dark', 'system']),
+  openingBalance: Number (default: 85000),
+  userName: String,
+  monthlySavingsTargetPct: Number,
+  createdAt: ISODate,
+  updatedAt: ISODate
+}
+```
+
+### Zero-Configuration Embedded Database Strategy
+To ensure the application executes effortlessly during academic evaluation and live viva demonstrations without requiring manual installation of MongoDB, the backend implements an automatic fallback:
+1. It attempts connection to `MONGODB_URI` (Atlas or local instance).
+2. If absent or unreachable, it dynamically spins up an embedded in-memory MongoDB daemon using `MongoMemoryServer`.
+3. It immediately initializes the demo account (`demo@moneta.app` / `demo123456`) and populates 41 realistic transaction records and 10 category budgets.
 
 ---
 

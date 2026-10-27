@@ -6,11 +6,12 @@ import {
   PieChart,
   Target,
   Settings,
-  Sparkles,
   X,
   CreditCard,
+  LogOut,
+  Database,
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -26,7 +27,10 @@ const NAV_ITEMS = [
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { settings } = useApp();
+  const { user, logout, isBackendConnected } = useAuth();
+
+  const displayName = user?.name || 'Rohan Sharma';
+  const displayEmail = user?.email || 'demo@moneta.app';
 
   return (
     <>
@@ -54,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
                 MONETA
                 <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                  v1.0
+                  MERN
                 </span>
               </span>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-none">
@@ -100,35 +104,56 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           })}
         </div>
 
-        {/* Academic Project Card / Demo Badge */}
-        <div className="p-4 mx-3 mb-4 rounded-xl bg-gradient-to-br from-slate-50 to-indigo-50/40 dark:from-slate-800/60 dark:to-indigo-950/20 border border-slate-200/60 dark:border-slate-700/60">
-          <div className="flex items-center gap-2 mb-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>College FSD Mini-Project</span>
+        {/* MongoDB Connection Status Pill */}
+        <div className="p-3 mx-3 mb-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+              <Database className="w-3.5 h-3.5 text-indigo-500" />
+              <span>MongoDB Engine</span>
+            </span>
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              {isBackendConnected ? 'Connected' : 'Local'}
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-            Autonomous client-side data architecture with Recharts visual engine.
-          </p>
         </div>
 
         {/* User profile footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center shrink-0 border border-slate-300 dark:border-slate-600">
-            {settings.userName
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .substring(0, 2)
-              .toUpperCase()}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
+              {displayName
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {displayName}
+                </p>
+                {user?.isDemo && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+                    Demo
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                {displayEmail}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-              {settings.userName}
-            </p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-              Default ({settings.currency})
-            </p>
-          </div>
+
+          <button
+            onClick={logout}
+            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+            title="Sign out of account"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </aside>
     </>

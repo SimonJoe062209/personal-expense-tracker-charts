@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
@@ -16,10 +17,14 @@ import {
   Coins,
   User,
   Info,
+  Database,
+  LogOut,
+  KeyRound,
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings, resetToDemo, transactions, budgets } = useApp();
+  const { user, logout, isBackendConnected } = useAuth();
   const { showToast } = useToast();
 
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
@@ -113,6 +118,60 @@ export const SettingsPage: React.FC = () => {
           Control currency locales, presentation theme, opening balance reserves, and data state.
         </p>
       </div>
+
+      {/* Account & MongoDB Session Banner */}
+      <Card
+        title="Active User Session & Database State"
+        subtitle="Current authenticated account and MongoDB persistence status."
+        action={
+          <Button variant="danger" size="sm" icon={<LogOut className="w-3.5 h-3.5" />} onClick={logout}>
+            Sign Out
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-sm flex items-center justify-center shrink-0">
+              {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {user?.name || 'Rohan Sharma'}
+                </span>
+                {user?.isDemo && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    Demo Account
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 truncate">{user?.email || 'demo@moneta.app'}</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 flex items-center gap-1.5 font-medium">
+                <Database className="w-3.5 h-3.5 text-indigo-500" />
+                MongoDB Status
+              </span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {isBackendConnected ? 'Connected & Synced' : 'Local Storage Mode'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs pt-1">
+              <span className="text-slate-500 flex items-center gap-1.5 font-medium">
+                <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                Demo Credentials
+              </span>
+              <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                demo@moneta.app / demo123456
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Currency & Formatting Section */}
       <Card

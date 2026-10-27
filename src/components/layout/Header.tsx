@@ -1,8 +1,9 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, Plus, Sun, Moon, Calendar } from 'lucide-react';
+import { Menu, Plus, Sun, Moon, Calendar, Database } from 'lucide-react';
 import { Button } from '../common/Button';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 
 interface HeaderProps {
@@ -20,6 +21,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const location = useLocation();
   const { settings, updateSettings, setIsAddTransactionOpen } = useApp();
+  const { isBackendConnected, user } = useAuth();
 
   const currentMeta = PAGE_TITLES[location.pathname] || {
     title: 'Financial Tracker',
@@ -44,18 +46,35 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           <Menu className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
-            {currentMeta.title}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
+              {currentMeta.title}
+            </h1>
+            {user?.isDemo && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+                Demo Mode
+              </span>
+            )}
+          </div>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
             {currentMeta.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* MongoDB Sync indicator */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-300">
+          <Database className="w-3.5 h-3.5 text-indigo-500" />
+          <span className="hidden md:inline text-slate-500 dark:text-slate-400">Database:</span>
+          <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {isBackendConnected ? 'MongoDB' : 'Local'}
+          </span>
+        </div>
+
         {/* Date badge */}
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-300">
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-300">
           <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
           <span>{todayFormatted}</span>
         </div>
