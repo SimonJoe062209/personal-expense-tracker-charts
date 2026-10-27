@@ -1,7 +1,10 @@
 import { Transaction, Budget, UserSettings } from '../types';
 
-// Dynamic API host determination (supports localhost, local network IP, and Vercel production)
+// Dynamic API host determination (supports custom URL, localhost, local network IP, and Vercel production)
 const getApiBaseUrl = () => {
+  if (import.meta.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
   if (typeof window !== 'undefined') {
     // If running in production (Vercel, Render, or any standard port 80/443 without local dev port)
     if (window.location.port === '' || window.location.protocol === 'https:') {
